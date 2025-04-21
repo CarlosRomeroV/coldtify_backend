@@ -78,7 +78,7 @@ router.get("/callback", async (req, res) => {
     }
 
     // ✅ Redirigir al frontend
-    res.redirect(`${process.env.FRONTEND_URL}/?access_token=${access_token}&refresh_token=${refresh_token}&display_name=${encodeURIComponent(displayName)}`);
+    res.redirect(`${process.env.FRONTEND_URL}/callback?access_token=${access_token}&refresh_token=${refresh_token}&display_name=${encodeURIComponent(displayName)}`);
   } catch (error) {
     console.error("Error en callback:", error.response?.data || error.message);
     res.status(500).send("Error al procesar autenticación");

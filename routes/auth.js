@@ -36,8 +36,8 @@ router.get("/login", (req, res) => {
  * Spotify redirige aquí con un "code" → intercambiamos por un access_token
  */
 router.get("/callback", async (req, res) => {
-  console.log("Entramos en callback");
   const code = req.query.code || null;
+  console.log("📥 Callback recibido. Código:", code);
 
   try {
     const tokenRes = await axios.post(
@@ -53,18 +53,18 @@ router.get("/callback", async (req, res) => {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       }
     );
-    console.log("Código recibido:", code);
+    console.log("🔐 Token recibido");
+
     const { access_token, refresh_token } = tokenRes.data;
 
-    // 🔍 Obtener datos del usuario desde Spotify
     const userRes = await axios.get("https://api.spotify.com/v1/me", {
       headers: { Authorization: `Bearer ${access_token}` },
     });
+    console.log("👤 Datos de usuario obtenidos");
 
     const spotifyId = userRes.data.id;
     const displayName = userRes.data.display_name || "Desconocido";
 
-    // 🗃 Insertar o recuperar en Supabase
     const { data: existingUser, error } = await supabase
       .from("users")
       .select("*")
@@ -72,20 +72,23 @@ router.get("/callback", async (req, res) => {
       .single();
 
     if (!existingUser) {
+      console.log("🆕 Insertando nuevo usuario en Supabase");
       await supabase.from("users").insert({
         spotify_id: spotifyId,
         display_name: displayName,
       });
     }
 
-    // ✅ Redirigir al frontend
-    console.log("Redirigiendo a:", `${process.env.FRONTEND_URL}/callback?access_token=${access_token}&refresh_token=${refresh_token}&display_name=${encodeURIComponent(displayName)}`);
-    res.redirect(`${process.env.FRONTEND_URL}/callback?access_token=${access_token}&refresh_token=${refresh_token}&display_name=${encodeURIComponent(displayName)}`);
+    const redirectUrl = `${frontend_url}/callback?access_token=${access_token}&refresh_token=${refresh_token}&display_name=${encodeURIComponent(displayName)}`;
+    console.log("🔁 Redirigiendo a:", redirectUrl);
+    res.redirect(redirectUrl);
+
   } catch (error) {
-    console.error("Error en callback:", error.response?.data || error.message);
+    console.error("❌ Error en callback:", error.response?.data || error.message);
     res.status(500).send("Error al procesar autenticación");
   }
 });
+
 
 /**
  * GET /refresh_token

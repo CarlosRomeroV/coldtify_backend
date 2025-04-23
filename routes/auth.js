@@ -36,6 +36,7 @@ router.get("/login", (req, res) => {
  * Spotify redirige aquí con un "code" → intercambiamos por un access_token
  */
 router.get("/callback", async (req, res) => {
+  console.log("Entramos en callback");
   const code = req.query.code || null;
 
   try {

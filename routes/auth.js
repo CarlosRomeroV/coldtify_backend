@@ -78,6 +78,7 @@ router.get("/callback", async (req, res) => {
     }
 
     // ✅ Redirigir al frontend
+    console.log("Redirigiendo a:", `${process.env.FRONTEND_URL}/callback?access_token=${access_token}&refresh_token=${refresh_token}&display_name=${encodeURIComponent(displayName)}`);
     res.redirect(`${process.env.FRONTEND_URL}/callback?access_token=${access_token}&refresh_token=${refresh_token}&display_name=${encodeURIComponent(displayName)}`);
   } catch (error) {
     console.error("Error en callback:", error.response?.data || error.message);

@@ -52,7 +52,7 @@ router.get("/callback", async (req, res) => {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       }
     );
-
+    console.log("Código recibido:", code);
     const { access_token, refresh_token } = tokenRes.data;
 
     // 🔍 Obtener datos del usuario desde Spotify

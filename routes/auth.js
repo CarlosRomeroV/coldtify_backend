@@ -37,7 +37,15 @@ router.get("/login", (req, res) => {
  */
 router.get("/callback", async (req, res) => {
   const code = req.query.code || null;
-  console.log("📥 Callback recibido. Código:", code);
+  console.log("📥 Callback recibido");
+
+  if (!code) {
+    console.error("❗ No se recibió el parámetro 'code'");
+    return res.status(400).send("Falta el parámetro 'code'");
+  }
+
+  console.log("🔑 Código recibido:", code);
+  console.log("🌐 Redirigiendo a:", redirect_uri);
 
   try {
     const tokenRes = await axios.post(
@@ -53,17 +61,20 @@ router.get("/callback", async (req, res) => {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       }
     );
-    console.log("🔐 Token recibido");
+
+    console.log("🔐 Tokens recibidos correctamente");
 
     const { access_token, refresh_token } = tokenRes.data;
 
     const userRes = await axios.get("https://api.spotify.com/v1/me", {
       headers: { Authorization: `Bearer ${access_token}` },
     });
-    console.log("👤 Datos de usuario obtenidos");
+
+    console.log("👤 Datos del usuario obtenidos de Spotify");
 
     const spotifyId = userRes.data.id;
     const displayName = userRes.data.display_name || "Desconocido";
+    console.log(`🆔 Spotify ID: ${spotifyId}, 🧑 Nombre: ${displayName}`);
 
     const { data: existingUser, error } = await supabase
       .from("users")
@@ -71,23 +82,37 @@ router.get("/callback", async (req, res) => {
       .eq("spotify_id", spotifyId)
       .single();
 
+    if (error) {
+      console.error("❗ Error al consultar Supabase:", error.message);
+    }
+
     if (!existingUser) {
-      console.log("🆕 Insertando nuevo usuario en Supabase");
+      console.log("🆕 Insertando nuevo usuario en Supabase...");
       await supabase.from("users").insert({
         spotify_id: spotifyId,
         display_name: displayName,
       });
+    } else {
+      console.log("📦 Usuario ya existente");
     }
 
     const redirectUrl = `${frontend_url}/callback?access_token=${access_token}&refresh_token=${refresh_token}&display_name=${encodeURIComponent(displayName)}`;
-    console.log("🔁 Redirigiendo a:", redirectUrl);
+    console.log("🚀 Redirigiendo a frontend:", redirectUrl);
+
     res.redirect(redirectUrl);
 
   } catch (error) {
-    console.error("❌ Error en callback:", error.response?.data || error.message);
+    console.error("❌ Error durante el callback:");
+    if (error.response) {
+      console.error("📡 Response status:", error.response.status);
+      console.error("📡 Response data:", error.response.data);
+    } else {
+      console.error("❗ Error sin respuesta:", error.message);
+    }
     res.status(500).send("Error al procesar autenticación");
   }
 });
+
 
 
 /**

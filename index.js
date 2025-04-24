@@ -2,6 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 
+// ⬇️ Añade esta línea para Puppeteer en Render
+process.env.PUPPETEER_EXECUTABLE_PATH = "/usr/bin/google-chrome";
+
 dotenv.config();
 
 const authRoutes = require("./routes/auth");

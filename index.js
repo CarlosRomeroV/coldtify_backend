@@ -2,9 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 
-// ⬇️ Añade esta línea para Puppeteer en Render
-process.env.PUPPETEER_EXECUTABLE_PATH = "/usr/bin/google-chrome";
-
 dotenv.config();
 
 const authRoutes = require("./routes/auth");
@@ -21,17 +18,20 @@ const allowedOrigins = [
   "https://coldtify.vercel.app"
 ];
 
-// Middleware CORS con validación dinámica
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Origen no permitido por CORS"));
-    }
-  },
-  credentials: true
-}));
+// Headers CORS explícitos para evitar errores con preflight
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200); // Evita errores CORS en preflight
+  }
+  next();
+});
 
 app.use(express.json());
 

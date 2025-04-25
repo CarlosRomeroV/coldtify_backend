@@ -118,11 +118,16 @@ router.get("/random-verse", async (req, res) => {
 
   try {
     const pageResponse = await axios.get(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
-      },
-      timeout: 15000 // 15 segundos de timeout
-    });
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Referer": "https://genius.com/",
+    "Upgrade-Insecure-Requests": "1",
+    "Connection": "keep-alive"
+  },
+  timeout: 15000 // sigue teniendo timeout de 15 segundos
+});
 
     const $ = cheerio.load(pageResponse.data);
 

@@ -118,20 +118,18 @@ router.get("/random-verse", async (req, res) => {
 
   try {
     const pageResponse = await axios.get(url, {
-  headers: {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.5",
-    "Referer": "https://genius.com/",
-    "Upgrade-Insecure-Requests": "1",
-    "Connection": "keep-alive"
-  },
-  timeout: 15000 // sigue teniendo timeout de 15 segundos
-});
+      headers: realisticHeaders,
+      timeout: 15000
+    });
 
     const $ = cheerio.load(pageResponse.data);
-
     const containers = $('div[class^="Lyrics__Container"]');
+
+    if (containers.length === 0) {
+      console.warn("⚠️ No se encontraron bloques de letra en la página.");
+      return res.status(404).json({ error: "No se encontraron letras visibles." });
+    }
+
     const lines = containers
       .map((_, el) => $(el).text().split("\n"))
       .get()
@@ -157,6 +155,7 @@ router.get("/random-verse", async (req, res) => {
     }
 
     if (allVerses.length === 0) {
+      console.warn("⚠️ No se encontró una estrofa válida entre las letras visibles.");
       return res.status(404).json({ error: "No se pudo encontrar una estrofa válida." });
     }
 
@@ -165,10 +164,11 @@ router.get("/random-verse", async (req, res) => {
 
     res.json({ verse });
   } catch (error) {
-    console.error("Error al obtener estrofa aleatoria:", error.message);
-    res.status(500).json({ error: "Error al analizar la letra." });
+    console.error("❌ Error interno al obtener la estrofa:", error.message);
+    res.status(500).json({ error: "Error interno al analizar la letra." });
   }
 });
+
 
 
 module.exports = router;

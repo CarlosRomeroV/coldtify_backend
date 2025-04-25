@@ -117,7 +117,13 @@ router.get("/random-verse", async (req, res) => {
   if (!url) return res.status(400).json({ error: "Falta el parámetro 'url'" });
 
   try {
-    const pageResponse = await axios.get(url);
+    const pageResponse = await axios.get(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+      },
+      timeout: 15000 // 15 segundos de timeout
+    });
+
     const $ = cheerio.load(pageResponse.data);
 
     const containers = $('div[class^="Lyrics__Container"]');
@@ -158,5 +164,6 @@ router.get("/random-verse", async (req, res) => {
     res.status(500).json({ error: "Error al analizar la letra." });
   }
 });
+
 
 module.exports = router;

@@ -125,6 +125,12 @@ router.get("/random-verse", async (req, res) => {
     const $ = cheerio.load(pageResponse.data);
     const containers = $('div[class^="Lyrics__Container"]');
 
+    // Logs para analizar el contenido
+    console.log("🔍 Contenedores encontrados:", containers.length);
+    if (containers.length > 0) {
+      console.log("🎶 Primer bloque de letra:", containers.first().text().slice(0, 200));
+    }
+
     if (containers.length === 0) {
       console.warn("⚠️ No se encontraron bloques de letra en la página.");
       return res.status(404).json({ error: "No se encontraron letras visibles." });
@@ -168,6 +174,7 @@ router.get("/random-verse", async (req, res) => {
     res.status(500).json({ error: "Error interno al analizar la letra." });
   }
 });
+
 
 
 

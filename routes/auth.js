@@ -5,7 +5,7 @@ const supabase = require("../utils/supabaseClient");
 
 const router = express.Router();
 
-// Spotify app credentials (desde .env)
+// Spotify app credentials
 const client_id = process.env.SPOTIFY_CLIENT_ID;
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET;
 const redirect_uri = process.env.SPOTIFY_REDIRECT_URI;
@@ -27,8 +27,6 @@ router.get("/login", (req, res) => {
   });
 
   res.redirect(`https://accounts.spotify.com/authorize?${queryParams}`);
- 
-
 });
 
 /**
@@ -45,9 +43,9 @@ router.get("/callback", async (req, res) => {
   }
 
   console.log("🔑 Código recibido:", code);
-  console.log("🌐 Redirigiendo a:", redirect_uri);
 
   try {
+    // Intercambiar el código por tokens
     const tokenRes = await axios.post(
       "https://accounts.spotify.com/api/token",
       querystring.stringify({
@@ -66,6 +64,7 @@ router.get("/callback", async (req, res) => {
 
     const { access_token, refresh_token } = tokenRes.data;
 
+    // Obtener datos del usuario en Spotify
     const userRes = await axios.get("https://api.spotify.com/v1/me", {
       headers: { Authorization: `Bearer ${access_token}` },
     });
@@ -76,26 +75,38 @@ router.get("/callback", async (req, res) => {
     const displayName = userRes.data.display_name || "Desconocido";
     console.log(`🆔 Spotify ID: ${spotifyId}, 🧑 Nombre: ${displayName}`);
 
-    const { data: existingUser, error } = await supabase
+    // Buscar usuario en Supabase
+    const { data: user, error: fetchError } = await supabase
       .from("users")
       .select("*")
       .eq("spotify_id", spotifyId)
       .single();
 
-    if (error) {
-      console.error("❗ Error al consultar Supabase:", error.message);
+    if (fetchError && fetchError.code !== "PGRST116") {
+      console.error("❗ Error al consultar Supabase:", fetchError.message);
+      return res.status(500).send("Error al consultar usuario en Supabase");
     }
 
-    if (!existingUser) {
+    if (!user) {
       console.log("🆕 Insertando nuevo usuario en Supabase...");
-      await supabase.from("users").insert({
-        spotify_id: spotifyId,
-        display_name: displayName,
-      });
+      const { error: insertError } = await supabase
+        .from("users")
+        .insert({
+          spotify_id: spotifyId,
+          display_name: displayName,
+          created_at: new Date().toISOString(),
+          score_game_1: 0, // Si quieres inicializar el score
+        });
+
+      if (insertError) {
+        console.error("❗ Error al insertar usuario nuevo:", insertError.message);
+        return res.status(500).send("Error al insertar usuario nuevo");
+      }
     } else {
       console.log("📦 Usuario ya existente");
     }
 
+    // Redirigir al frontend
     const redirectUrl = `${frontend_url}/callback?access_token=${access_token}&refresh_token=${refresh_token}&display_name=${encodeURIComponent(displayName)}`;
     console.log("🚀 Redirigiendo a frontend:", redirectUrl);
 
@@ -113,44 +124,40 @@ router.get("/callback", async (req, res) => {
   }
 });
 
-
-
 /**
  * GET /refresh_token
  * Recibe un refresh_token y devuelve un nuevo access_token
- * Ejemplo: /refresh_token?refresh_token=...
  */
 router.get("/refresh_token", async (req, res) => {
-    const refresh_token = req.query.refresh_token;
-  
-    if (!refresh_token) {
-      return res.status(400).json({ error: "Falta el refresh_token" });
-    }
-  
-    try {
-      const response = await axios.post(
-        "https://accounts.spotify.com/api/token",
-        querystring.stringify({
-          grant_type: "refresh_token",
-          refresh_token,
-          client_id,
-          client_secret,
-        }),
-        {
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-        }
-      );
-  
-      const { access_token, expires_in } = response.data;
-  
-      res.json({ access_token, expires_in });
-    } catch (error) {
-      console.error("Error al refrescar token:", error.response?.data || error.message);
-      res.status(500).json({ error: "No se pudo refrescar el token" });
-    }
-  });
-  
+  const refresh_token = req.query.refresh_token;
+
+  if (!refresh_token) {
+    return res.status(400).json({ error: "Falta el refresh_token" });
+  }
+
+  try {
+    const response = await axios.post(
+      "https://accounts.spotify.com/api/token",
+      querystring.stringify({
+        grant_type: "refresh_token",
+        refresh_token,
+        client_id,
+        client_secret,
+      }),
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+
+    const { access_token, expires_in } = response.data;
+
+    res.json({ access_token, expires_in });
+  } catch (error) {
+    console.error("❌ Error al refrescar token:", error.response?.data || error.message);
+    res.status(500).json({ error: "No se pudo refrescar el token" });
+  }
+});
 
 module.exports = router;

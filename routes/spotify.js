@@ -61,6 +61,55 @@ router.get("/top-tracks", async (req, res) => {
   }
 });
 
+router.get("/top-albums", async (req, res) => {
+  const access_token = req.headers.authorization?.split(" ")[1];
+
+  if (!access_token) {
+    return res.status(401).json({ error: "No token provided" });
+  }
+
+  try {
+    // Obtener las canciones más escuchadas
+    const fetchTopTracks = async (offset) => {
+      const response = await axios.get(`https://api.spotify.com/v1/me/top/tracks?limit=50&offset=${offset}`, {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      });
+      return response.data.items;
+    };
+
+    const offsets = [0, 50];
+    const allRequests = offsets.map(fetchTopTracks);
+    const allChunks = await Promise.all(allRequests);
+    const allTracks = allChunks.flat();
+
+    // Crear una lista de álbumes únicos
+    const albumsMap = new Map();
+    allTracks.forEach((track) => {
+      const albumName = track.album.name;
+      if (!albumsMap.has(albumName)) {
+        albumsMap.set(albumName, {
+          name: albumName,
+          image: track.album.images[0]?.url || null,
+        });
+      }
+    });
+
+    const albums = Array.from(albumsMap.values());
+
+    // Seleccionar 10 álbumes aleatorios
+    const shuffled = albums.sort(() => 0.5 - Math.random());
+    const selectedAlbums = shuffled.slice(0, 10);
+
+    res.json(selectedAlbums);
+  } catch (error) {
+    console.error("Error al obtener top albums:", error.response?.data || error.message);
+    res.status(500).json({ error: "No se pudieron obtener los álbumes" });
+  }
+});
+
+
 router.get("/random-track", async (req, res) => {
   const access_token = req.headers.authorization?.split(" ")[1];
   if (!access_token) {
